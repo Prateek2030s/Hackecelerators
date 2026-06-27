@@ -3,6 +3,7 @@ import { getOpenAI } from '@/lib/openai';
 import { supabaseAdmin } from '@/lib/supabase';
 import { CODE_REVIEW_PROMPT } from '@/lib/prompts';
 import { fillPrompt, parseAIResponse } from '@/lib/utils';
+import { upsertStudentSkillEvidence } from '@/lib/skill-passport';
 import type { ReviewScores, SkillAssessment, Submission } from '@/types';
 
 interface ReviewResponse {
@@ -16,27 +17,43 @@ interface ReviewResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const { taskId, studentName, code, language, studentEmail } = await request.json();
+    const { taskId, studentId, studentName, code, language, studentEmail } = await request.json();
 
-    if (!taskId || !studentName || !code) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!taskId || !code || (!studentId && !studentName)) {
+      return NextResponse.json({ error: 'taskId, code, and student identity are required' }, { status: 400 });
     }
 
-    const { data: task, error: taskError } = await supabaseAdmin
-      .from('tasks')
-      .select('*')
-      .eq('id', taskId)
-      .single();
+    const { data: task, error: taskError } = await supabaseAdmin.from('tasks').select('*').eq('id', taskId).single();
+    if (taskError || !task) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-    if (taskError || !task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    let resolvedStudentName = studentName;
+    let resolvedStudentEmail = studentEmail || null;
+
+    if (studentId) {
+      const { data: student, error: studentError } = await supabaseAdmin
+        .from('app_users')
+        .select('*')
+        .eq('id', studentId)
+        .eq('role', 'student')
+        .single();
+
+      if (studentError || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+
+      resolvedStudentName = resolvedStudentName || student.name;
+      resolvedStudentEmail = resolvedStudentEmail || student.email;
+
+      const { error: contributionError } = await supabaseAdmin
+        .from('project_contributors')
+        .upsert({ project_id: task.project_id, student_id: studentId, status: 'active' }, { onConflict: 'project_id,student_id' });
+
+      if (contributionError) return NextResponse.json({ error: contributionError.message }, { status: 500 });
     }
 
     const prompt = fillPrompt(CODE_REVIEW_PROMPT, {
       taskTitle: task.title,
       taskDescription: task.description,
       businessContext: task.business_context || '',
-      acceptanceCriteria: (task.acceptance_criteria || []).map((c: string) => `- ${c}`).join('\n'),
+      acceptanceCriteria: (task.acceptance_criteria || []).map((c: string) => '- ' + c).join('\n'),
       techSkills: (task.tech_skills || []).join(', '),
       language: language || 'javascript',
       code,
@@ -50,9 +67,7 @@ export async function POST(request: NextRequest) {
     });
 
     const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      return NextResponse.json({ error: 'AI review failed' }, { status: 500 });
-    }
+    if (!content) return NextResponse.json({ error: 'AI review failed' }, { status: 500 });
 
     let review: ReviewResponse;
     try {
@@ -67,14 +82,12 @@ export async function POST(request: NextRequest) {
       .from('submissions')
       .insert({
         task_id: taskId,
-        student_name: studentName,
-        student_email: studentEmail || null,
+        student_id: studentId || null,
+        student_name: resolvedStudentName,
+        student_email: resolvedStudentEmail,
         code,
         language: language || 'javascript',
-        ai_review: {
-          overallFeedback: review.overallFeedback,
-          passesThreshold: review.passesThreshold,
-        },
+        ai_review: { overallFeedback: review.overallFeedback, passesThreshold: review.passesThreshold },
         overall_score: review.overallScore,
         scores: review.scores,
         skills_assessed: review.skillsAssessed,
@@ -90,7 +103,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save submission' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, submission: submission as Submission });
+    let passportSkills = [];
+    if (studentId && review.skillsAssessed?.length) {
+      passportSkills = await upsertStudentSkillEvidence(
+        studentId,
+        review.skillsAssessed.map((skill) => ({
+          skill: skill.skill,
+          proficiency: skill.proficiency,
+          confidence: 75,
+          evidence: skill.evidence,
+          submissionId: submission.id,
+          taskId,
+        }))
+      );
+    }
+
+    return NextResponse.json({ success: true, submission: submission as Submission, passportSkills });
   } catch (error) {
     console.error('review-submission error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

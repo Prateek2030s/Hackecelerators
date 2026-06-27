@@ -108,3 +108,51 @@ ALTER TABLE project_contributors ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on app_users" ON app_users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on companies" ON companies FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on project_contributors" ON project_contributors FOR ALL USING (true) WITH CHECK (true);
+
+
+-- Skill passport storage
+CREATE TABLE skills (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  category TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE student_skills (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_id UUID REFERENCES app_users(id) ON DELETE CASCADE NOT NULL,
+  skill_id UUID REFERENCES skills(id) ON DELETE CASCADE NOT NULL,
+  score INTEGER DEFAULT 0 CHECK (score >= 0 AND score <= 100),
+  confidence INTEGER DEFAULT 0 CHECK (confidence >= 0 AND confidence <= 100),
+  evidence TEXT,
+  assessment_count INTEGER DEFAULT 0,
+  last_assessed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(student_id, skill_id)
+);
+
+CREATE TABLE skill_evidence (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_skill_id UUID REFERENCES student_skills(id) ON DELETE CASCADE NOT NULL,
+  submission_id UUID REFERENCES submissions(id) ON DELETE SET NULL,
+  task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+  score INTEGER DEFAULT 0 CHECK (score >= 0 AND score <= 100),
+  confidence INTEGER DEFAULT 0 CHECK (confidence >= 0 AND confidence <= 100),
+  evidence TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS student_skills_student_id_idx ON student_skills(student_id);
+CREATE INDEX IF NOT EXISTS student_skills_skill_id_idx ON student_skills(skill_id);
+CREATE INDEX IF NOT EXISTS skill_evidence_student_skill_id_idx ON skill_evidence(student_skill_id);
+CREATE INDEX IF NOT EXISTS skill_evidence_submission_id_idx ON skill_evidence(submission_id);
+CREATE INDEX IF NOT EXISTS skill_evidence_task_id_idx ON skill_evidence(task_id);
+
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_evidence ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all on skills" ON skills FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on student_skills" ON student_skills FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on skill_evidence" ON skill_evidence FOR ALL USING (true) WITH CHECK (true);

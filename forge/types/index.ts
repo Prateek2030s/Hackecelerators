@@ -95,6 +95,44 @@ export interface Submission {
   student?: AppUser;
 }
 
+
+export interface Skill {
+  id: string;
+  name: string;
+  category: string | null;
+  created_at: string;
+}
+
+export interface StudentSkill {
+  id: string;
+  student_id: string;
+  skill_id: string;
+  score: number;
+  confidence: number;
+  evidence: string | null;
+  assessment_count: number;
+  last_assessed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  skill?: Skill;
+  skills?: Skill;
+  evidence_items?: SkillEvidence[];
+  skill_evidence?: SkillEvidence[];
+}
+
+export interface SkillEvidence {
+  id: string;
+  student_skill_id: string;
+  submission_id: string | null;
+  task_id: string | null;
+  score: number;
+  confidence: number;
+  evidence: string;
+  created_at: string;
+  submission?: Submission;
+  task?: Task;
+}
+
 export interface AIReview {
   overallFeedback: string;
   passesThreshold: boolean;

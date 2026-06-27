@@ -8,9 +8,7 @@ export async function GET() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     const projectsWithCounts = await Promise.all(
       (projects || []).map(async (project) => {
@@ -19,11 +17,7 @@ export async function GET() {
           .select('*', { count: 'exact', head: true })
           .eq('project_id', project.id);
 
-        const { data: tasks } = await supabaseAdmin
-          .from('tasks')
-          .select('id')
-          .eq('project_id', project.id);
-
+        const { data: tasks } = await supabaseAdmin.from('tasks').select('id').eq('project_id', project.id);
         const taskIds = (tasks || []).map((t) => t.id);
         let submissionCount = 0;
         if (taskIds.length > 0) {
@@ -34,11 +28,7 @@ export async function GET() {
           submissionCount = count || 0;
         }
 
-        return {
-          ...project,
-          task_count: taskCount || 0,
-          submission_count: submissionCount,
-        };
+        return { ...project, task_count: taskCount || 0, submission_count: submissionCount };
       })
     );
 
@@ -52,23 +42,28 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      founder_name,
-      repo_url,
-      repo_name,
-      repo_description,
-      repo_summary,
-      tech_stack,
-      architecture_overview,
-    } = body;
+    const { founder_id, company_id, founder_name, repo_url, repo_name, repo_description, repo_summary, tech_stack, architecture_overview } = body;
 
     if (!founder_name || !repo_url || !repo_name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (founder_id) {
+      const { data: founder, error: founderError } = await supabaseAdmin
+        .from('app_users')
+        .select('id')
+        .eq('id', founder_id)
+        .eq('role', 'founder')
+        .single();
+
+      if (founderError || !founder) return NextResponse.json({ error: 'Founder not found' }, { status: 404 });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('projects')
       .insert({
+        founder_id: founder_id || null,
+        company_id: company_id || null,
         founder_name,
         repo_url,
         repo_name,
@@ -80,9 +75,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({ project: data });
   } catch (error) {

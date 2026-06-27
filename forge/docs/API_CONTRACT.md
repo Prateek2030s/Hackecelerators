@@ -102,3 +102,99 @@ type Task = {
   created_at: string;
 };
 ~~~
+
+
+## Account APIs
+
+### Upsert User
+
+`POST /api/users`
+
+~~~json
+{
+  "external_auth_id": "clerk-user-id-or-null",
+  "role": "founder | student",
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "image_url": null
+}
+~~~
+
+Returns:
+
+~~~json
+{ "user": {} }
+~~~
+
+### List Users
+
+`GET /api/users?role=student`
+
+### User Detail
+
+`GET /api/users/:userId`
+
+Returns the user plus owned projects, contributions, submissions, and skills.
+
+## Student Contribution APIs
+
+### Start Or Update Task Contribution
+
+`POST /api/tasks/:taskId/contributions`
+
+~~~json
+{
+  "student_id": "uuid",
+  "status": "active"
+}
+~~~
+
+This creates or updates `project_contributors` using the task's `project_id`.
+
+### List Task Project Contributors
+
+`GET /api/tasks/:taskId/contributions`
+
+## Submission Contract
+
+`POST /api/submissions` remains backward-compatible with `student_name`, but new student profile code should send `student_id`.
+
+~~~json
+{
+  "task_id": "uuid",
+  "student_id": "uuid",
+  "code": "...",
+  "language": "typescript"
+}
+~~~
+
+`GET /api/submissions?student_id=:studentId` filters a student's submissions.
+
+## Skill Passport APIs
+
+### Read Skill Passport
+
+`GET /api/students/:studentId/skill-passport`
+
+Returns the student plus aggregated `student_skills` and evidence records.
+
+### Add Skill Evidence
+
+`POST /api/students/:studentId/skill-passport/evidence`
+
+~~~json
+{
+  "submission_id": "uuid-or-null",
+  "task_id": "uuid-or-null",
+  "skills": [
+    {
+      "skill": "React",
+      "score": 82,
+      "confidence": 76,
+      "evidence": "Built a reusable component and handled loading states."
+    }
+  ]
+}
+~~~
+
+Scores are averaged into `student_skills`; each assessment is preserved in `skill_evidence`.
