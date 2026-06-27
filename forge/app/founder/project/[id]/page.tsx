@@ -29,7 +29,7 @@ export default function ProjectDetailPage() {
     try {
       const [projectRes, submissionsRes] = await Promise.all([
         fetch(`/api/projects/${id}`),
-        fetch('/api/submissions'),
+        fetch('/api/submissions?project_id=' + encodeURIComponent(id)),
       ]);
 
       const projectData = await projectRes.json();
@@ -54,6 +54,18 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleReviewUpdated = (updatedSubmission: Submission) => {
+    setSubmissions((current) =>
+      current
+        .map((submission) =>
+          submission.id === updatedSubmission.id
+            ? { ...submission, ...updatedSubmission, task: submission.task || updatedSubmission.task }
+            : submission
+        )
+        .sort((a, b) => b.overall_score - a.overall_score)
+    );
+  };
 
   if (loading) {
     return (
@@ -170,6 +182,7 @@ export default function ProjectDetailPage() {
               <SubmissionListItem
                 key={submission.id}
                 submission={{ ...submission, task }}
+                              onReviewUpdated={handleReviewUpdated}
               />
             );
           })}

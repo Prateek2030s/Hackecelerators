@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get('task_id');
+    const projectId = searchParams.get('project_id');
     const studentId = searchParams.get('student_id');
     const studentName = searchParams.get('student_name');
 
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
       .order('overall_score', { ascending: false });
 
     if (taskId) query = query.eq('task_id', taskId);
+    if (projectId) query = query.eq('tasks.project_id', projectId);
     if (studentId) query = query.eq('student_id', studentId);
     if (studentName) query = query.ilike('student_name', studentName);
 
