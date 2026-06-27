@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getOpenAIKey } from '@/lib/openai';
 
 type SimpleTask = {
   title: string;
@@ -96,13 +97,15 @@ export async function POST(request: NextRequest) {
 
     const context = await fetchTinyRepoContext(repoUrl);
 
-    if (!process.env.OPENAI_API_KEY) {
+    const openAIKey = getOpenAIKey();
+
+    if (!openAIKey) {
       return NextResponse.json({ repo: context, tasks: fallbackTasks(context), source: 'fallback' });
     }
 
     const prompt = `Generate exactly 3 simple beginner-friendly engineering tasks for this public GitHub repo. Keep output concise and cheap.\n\nRepo: ${context.name}\nDescription: ${context.description}\nLanguage: ${context.language}\nTopics: ${context.topics.join(', ') || 'none'}\nREADME excerpt: ${context.readme || 'none'}\n\nReturn only JSON: {"tasks":[{"title":"","description":"","difficulty":"beginner|intermediate","estimatedTime":"","skills":[""],"acceptanceCriteria":[""]}]}`;
 
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = new OpenAI({ apiKey: openAIKey });
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOpenAI } from '@/lib/openai';
+import { getOpenAI, getOpenAIKey } from '@/lib/openai';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { GenerateRepositoryTasksResponse } from '@/lib/contracts/api';
 import type { RepoSummary, Task } from '@/types';
@@ -161,7 +161,7 @@ export async function POST(
     let generatedTasks: GeneratedTask[];
     let source: 'openai' | 'fallback' = 'fallback';
 
-    if (process.env.OPENAI_API_KEY) {
+    if (getOpenAIKey()) {
       const completion = await getOpenAI().chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: buildPrompt(repository, count) }],
