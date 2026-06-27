@@ -41,6 +41,15 @@ export function Navbar() {
           ))}
         </nav>
 
+        <div className="hidden items-center gap-2 md:flex">
+          <Button render={<Link href="/auth/login" />} variant="ghost" className="text-zinc-400 hover:text-zinc-50">
+            Sign in
+          </Button>
+          <Button render={<Link href="/auth/sign-up" />} className="bg-amber-500 text-zinc-950 hover:bg-amber-400">
+            Join Forge
+          </Button>
+        </div>
+
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             render={
