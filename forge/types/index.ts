@@ -1,5 +1,36 @@
+export interface AppUser {
+  id: string;
+  external_auth_id: string | null;
+  role: 'founder' | 'student';
+  name: string;
+  email: string;
+  image_url: string | null;
+  created_at: string;
+}
+
+export interface Company {
+  id: string;
+  owner_id: string;
+  company_name: string;
+  description: string | null;
+  created_at: string;
+  owner?: AppUser;
+}
+
+export interface ProjectContributor {
+  id: string;
+  project_id: string;
+  student_id: string;
+  status: 'active' | 'completed' | 'removed';
+  created_at: string;
+  student?: AppUser;
+  project?: Project;
+}
+
 export interface Project {
   id: string;
+  founder_id: string | null;
+  company_id: string | null;
   founder_name: string;
   repo_url: string;
   repo_name: string;
@@ -9,6 +40,8 @@ export interface Project {
   architecture_overview: string | null;
   status: 'active' | 'archived';
   created_at: string;
+  founder?: AppUser;
+  company?: Company;
   tasks?: Task[];
   task_count?: number;
   submission_count?: number;
@@ -45,6 +78,7 @@ export interface Task {
 export interface Submission {
   id: string;
   task_id: string;
+  student_id: string | null;
   student_name: string;
   student_email: string | null;
   code: string;
@@ -58,6 +92,7 @@ export interface Submission {
   status: 'pending' | 'reviewed' | 'accepted' | 'rejected';
   created_at: string;
   task?: Task;
+  student?: AppUser;
 }
 
 export interface AIReview {

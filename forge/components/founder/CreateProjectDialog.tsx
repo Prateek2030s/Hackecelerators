@@ -110,13 +110,10 @@ export function CreateProjectDialog({ open, onOpenChange, onSuccess }: CreatePro
       const projectData = await projectRes.json();
       if (!projectRes.ok) throw new Error(projectData.error || 'Failed to create project');
 
-      const tasksRes = await fetch('/api/generate-tasks', {
+      const tasksRes = await fetch(`/api/repositories/${projectData.project.id}/tasks/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projectId: projectData.project.id,
-          repoSummary: analysis,
-          repoName,
           count: 3,
         }),
       });
