@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { ArrowLeft, Check } from 'lucide-react';
-import type { Submission, Task } from '@/types';
+import type { AppUser, Submission, Task } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,8 @@ import { CodeWorkspace, CodeWorkspaceMobileTabs } from '@/components/student/Cod
 import { ReviewResult } from '@/components/student/ReviewResult';
 import { detectLanguageFromTechStack } from '@/lib/utils';
 
+type Role = 'founder' | 'student';
+
 const REVIEW_MESSAGES = [
   'Submitting your code...',
   'AI is reading your implementation...',
@@ -22,6 +26,29 @@ const REVIEW_MESSAGES = [
   'Assessing security practices...',
   'Calculating your score...',
 ];
+
+async function createBrowserSupabaseClient(): Promise<SupabaseClient> {
+  const response = await fetch('/api/auth/config');
+  const config = await response.json();
+  if (!response.ok) throw new Error(config.error || 'Supabase auth config is missing.');
+  return createClient(config.supabaseUrl, config.supabaseAnonKey);
+}
+
+async function loadCurrentStudent(): Promise<AppUser | null> {
+  const client = await createBrowserSupabaseClient();
+  const { data } = await client.auth.getSession();
+  const sessionUser = data.session?.user;
+  if (!sessionUser?.email) return null;
+
+  const fallbackRole = sessionUser.user_metadata?.role as Role | undefined;
+  if (fallbackRole && fallbackRole !== 'student') return null;
+
+  const response = await fetch('/api/users?email=' + encodeURIComponent(sessionUser.email));
+  const payload = await response.json();
+  if (!response.ok) return null;
+  const appUser = payload.users?.[0] as AppUser | undefined;
+  return appUser?.role === 'student' ? appUser : null;
+}
 
 function TaskInfoPanel({ task }: { task: Task }) {
   return (
@@ -104,6 +131,7 @@ export default function TaskWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [studentName, setStudentName] = useState('');
+  const [student, setStudent] = useState<AppUser | null>(null);
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [submitting, setSubmitting] = useState(false);
@@ -131,6 +159,24 @@ export default function TaskWorkspacePage() {
     fetchTask();
   }, [fetchTask]);
 
+  useEffect(() => {
+    let active = true;
+
+    loadCurrentStudent()
+      .then((currentStudent) => {
+        if (!active || !currentStudent) return;
+        setStudent(currentStudent);
+        setStudentName((current) => current || currentStudent.name);
+      })
+      .catch(() => {
+        if (active) setStudent(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleSubmit = async () => {
     const resolvedStudentName = studentName.trim() || 'Demo Student';
 
@@ -148,6 +194,7 @@ export default function TaskWorkspacePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           taskId: id,
+          studentId: student?.id,
           studentName: resolvedStudentName,
           code,
           language,

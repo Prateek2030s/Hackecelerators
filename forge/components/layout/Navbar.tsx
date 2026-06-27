@@ -18,9 +18,18 @@ type NavUser = {
   role: Role;
 };
 
-const navLinks = [
+const loggedOutNavLinks = [
   { href: '/founder', label: 'For Founders' },
   { href: '/student', label: 'For Students' },
+];
+
+const founderNavLinks = [
+  { href: '/founder', label: 'Projects' },
+];
+
+const studentNavLinks = [
+  { href: '/student', label: 'Tasks' },
+  { href: '/student/profile', label: 'Passport' },
 ];
 
 function dashboardForRole(role: Role) {
@@ -101,6 +110,12 @@ export function Navbar() {
     };
   }, []);
 
+  const visibleNavLinks = user?.role === 'founder'
+    ? founderNavLinks
+    : user?.role === 'student'
+      ? studentNavLinks
+      : loggedOutNavLinks;
+
   async function handleSignOut() {
     await supabase?.auth.signOut();
     setUser(null);
@@ -180,7 +195,7 @@ export function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          {navLinks.map((link) => (
+          {visibleNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -209,7 +224,7 @@ export function Navbar() {
           />
           <SheetContent side="right" className="border-zinc-800 bg-zinc-950">
             <nav className="mt-8 flex flex-col gap-4">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}

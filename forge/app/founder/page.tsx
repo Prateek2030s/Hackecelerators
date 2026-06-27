@@ -36,7 +36,7 @@ export default function FounderPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 lg:px-16">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-heading text-3xl font-bold text-zinc-50">Your Projects</h1>
+        <h1 className="font-heading text-3xl font-bold text-zinc-50">Founder Projects</h1>
         <Button
           onClick={() => setDialogOpen(true)}
           className="min-h-[44px] bg-amber-500 text-zinc-950 hover:bg-amber-400"

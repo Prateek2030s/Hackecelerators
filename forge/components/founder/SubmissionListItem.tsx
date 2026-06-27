@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BrainCircuit, ChevronDown, ChevronUp, Loader2, RotateCcw } from 'lucide-react';
+import { BrainCircuit, CheckCircle2, ChevronDown, ChevronUp, Loader2, RotateCcw } from 'lucide-react';
 import type { Submission } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ interface SubmissionListItemProps {
 export function SubmissionListItem({ submission, onReviewUpdated }: SubmissionListItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const scoreColor = getScoreColor(submission.overall_score);
   const hasReview = Boolean(submission.feedback || submission.overall_score > 0 || submission.scores);
@@ -31,6 +32,25 @@ export function SubmissionListItem({ submission, onReviewUpdated }: SubmissionLi
         { label: 'Testing', ...submission.scores.testing },
       ]
     : [];
+
+  async function approveSubmission() {
+    setApproving(true);
+    setReviewError('');
+
+    try {
+      const response = await fetch('/api/submissions/' + submission.id + '/approve', {
+        method: 'POST',
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Approval failed');
+      onReviewUpdated?.(payload.submission);
+      setExpanded(true);
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Approval failed');
+    } finally {
+      setApproving(false);
+    }
+  }
 
   async function runReview() {
     setReviewing(true);
@@ -68,7 +88,7 @@ export function SubmissionListItem({ submission, onReviewUpdated }: SubmissionLi
           ) : (
             <Badge variant="outline" className="border-amber-500/40 text-amber-300">Needs review</Badge>
           )}
-          <Badge variant="outline" className="border-zinc-700 capitalize">{submission.status}</Badge>
+          <Badge variant="outline" className="border-zinc-700 capitalize">{submission.status === 'accepted' ? 'approved' : submission.status}</Badge>
           <span className="hidden text-xs text-zinc-500 sm:inline">{new Date(submission.created_at).toLocaleDateString()}</span>
           {expanded ? <ChevronUp className="size-4 text-zinc-500" /> : <ChevronDown className="size-4 text-zinc-500" />}
         </div>
@@ -83,10 +103,22 @@ export function SubmissionListItem({ submission, onReviewUpdated }: SubmissionLi
                 {hasReview ? 'Review analysis is stored with this submission.' : 'Run the same OpenAI review used by the student submission flow.'}
               </p>
             </div>
-            <Button type="button" onClick={runReview} disabled={reviewing} className="bg-amber-500 text-zinc-950 hover:bg-amber-400">
-              {reviewing ? <Loader2 className="size-4 animate-spin" /> : hasReview ? <RotateCcw className="size-4" /> : <BrainCircuit className="size-4" />}
-              {hasReview ? 'Re-run review' : 'Run AI review'}
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                onClick={approveSubmission}
+                disabled={approving || submission.status === 'accepted'}
+                variant="outline"
+                className="border-emerald-600 text-emerald-300 hover:text-emerald-200"
+              >
+                {approving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                {submission.status === 'accepted' ? 'Approved' : 'Approve submission'}
+              </Button>
+              <Button type="button" onClick={runReview} disabled={reviewing} className="bg-amber-500 text-zinc-950 hover:bg-amber-400">
+                {reviewing ? <Loader2 className="size-4 animate-spin" /> : hasReview ? <RotateCcw className="size-4" /> : <BrainCircuit className="size-4" />}
+                {hasReview ? 'Re-run review' : 'Run AI review'}
+              </Button>
+            </div>
           </div>
 
           {reviewError ? <p className="text-sm text-red-400">{reviewError}</p> : null}
