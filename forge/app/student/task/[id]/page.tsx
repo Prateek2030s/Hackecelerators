@@ -25,7 +25,7 @@ const REVIEW_MESSAGES = [
 
 function TaskInfoPanel({ task }: { task: Task }) {
   return (
-    <div className="space-y-6 overflow-y-auto pr-2">
+    <div className="h-full space-y-6 overflow-y-auto pr-2">
       <div>
         <h1 className="font-heading text-2xl font-bold text-zinc-50">{task.title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -132,10 +132,8 @@ export default function TaskWorkspacePage() {
   }, [fetchTask]);
 
   const handleSubmit = async () => {
-    if (!studentName.trim()) {
-      setSubmitError('Please enter your name');
-      return;
-    }
+    const resolvedStudentName = studentName.trim() || 'Demo Student';
+
     if (!code.trim()) {
       setSubmitError('Please write some code before submitting');
       return;
@@ -150,7 +148,7 @@ export default function TaskWorkspacePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           taskId: id,
-          studentName: studentName.trim(),
+          studentName: resolvedStudentName,
           code,
           language,
         }),
@@ -221,9 +219,9 @@ export default function TaskWorkspacePage() {
       <LoadingOverlay messages={REVIEW_MESSAGES} isVisible={submitting} />
 
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 lg:px-16">
-        <div className="hidden md:flex md:gap-6" style={{ minHeight: 'calc(100vh - 12rem)' }}>
-          <div className="w-[45%] shrink-0">{taskPanel}</div>
-          <div className="w-[55%] flex-1">
+        <div className="hidden md:flex md:h-[calc(100vh-12rem)] md:min-h-[520px] md:max-h-[760px] md:gap-6">
+          <div className="min-h-0 w-[45%] shrink-0 overflow-hidden">{taskPanel}</div>
+          <div className="min-h-0 w-[55%] flex-1 overflow-hidden">
             {!submission ? (
               <>
                 {codePanel}

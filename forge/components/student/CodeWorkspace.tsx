@@ -61,7 +61,7 @@ export function CodeWorkspace({
   }, [initialized, taskTitle, defaultLanguage, language, onCodeChange, onLanguageChange]);
 
   const editorPanel = (
-    <div className="flex h-full flex-col rounded-xl border border-zinc-800 bg-zinc-900">
+    <div className="flex h-[70vh] min-h-[420px] flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 md:h-[calc(100vh-12rem)] md:min-h-[520px] md:max-h-[760px]">
       <div className="flex flex-wrap items-center gap-3 border-b border-zinc-800 p-3">
         <select
           value={language}
@@ -77,17 +77,17 @@ export function CodeWorkspace({
         <Input
           value={studentName}
           onChange={(e) => onStudentNameChange(e.target.value)}
-          placeholder="Your name"
+          placeholder="Your name (optional)"
           className="min-h-[44px] flex-1 border-zinc-700 bg-zinc-950"
         />
       </div>
 
-      <div className="flex-1 min-h-[300px]">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {isMobile ? (
           <textarea
             value={code}
             onChange={(e) => onCodeChange(e.target.value)}
-            className="mobile-code-editor h-full min-h-[300px] w-full resize-none bg-zinc-950 p-4 font-mono text-sm text-zinc-300 outline-none"
+            className="mobile-code-editor h-full w-full resize-none bg-zinc-950 p-4 font-mono text-sm text-zinc-300 outline-none"
             spellCheck={false}
           />
         ) : (
